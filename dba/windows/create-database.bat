@@ -24,8 +24,8 @@ if EXIST %AWLDIR%\awl-tables.sql (
 )
 
 rem Set DB user, web user, DB config directory, Windows DB config directory
-set AWL_DBAUSER=davical_dba
-set AWL_APPUSER=davical_app
+set AWL_DBAUSER=%3-davical_dba
+set AWL_APPUSER=%4-davical_app
 set DBA=%AWL_DBAUSER%
 
 rem Need PostgreSQL location

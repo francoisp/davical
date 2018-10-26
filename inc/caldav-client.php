@@ -48,7 +48,7 @@ class CalDAVClient {
   * @param string $pass      The password for that user
   * @param string $calendar  The name of the calendar (not currently used)
   */
-  function CalDAVClient( $base_url, $user, $pass, $calendar = '' ) {
+  function __construct( $base_url, $user, $pass, $calendar = '' ) {
     $this->user = $user;
     $this->pass = $pass;
     $this->calendar = $calendar;

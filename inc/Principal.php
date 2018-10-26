@@ -293,7 +293,6 @@ class Principal {
   /**
   * Work out the username, based on elements of the path.
   * @param string $path The path to be used.
-  * @param array $options The request options, controlling whether e-mail paths are allowed.
   */
   private function usernameFromPath( $path ) {
     global $session, $c;
@@ -407,6 +406,8 @@ class Principal {
   /**
   * Fetch the list of collections for this principal
   * @return string The internal dav_name for the home_calendar, or null if there is none
+  TODO: according to the postgres logs this gets called periodically, maybe when macosx calendar is configured, but with a bad param
+
   */
   protected function FetchCollections() {
     if ( isset($this->collections) ) return;

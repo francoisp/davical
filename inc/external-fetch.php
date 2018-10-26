@@ -49,7 +49,7 @@ function fetch_external ( $bind_id, $min_age = '1 hour', $ua_string )
   $sql = 'SELECT collection.*, collection.dav_name AS path, dav_binding.external_url AS external_url FROM dav_binding LEFT JOIN collection ON (collection.collection_id=bound_source_id) WHERE bind_id = :bind_id';
   $params = array( ':bind_id' => $bind_id );
   if ( strlen ( $min_age ) > 2 ) {
-    $sql .= ' AND collection.modified + interval :interval < NOW()';
+    $sql .= ' AND ( collection.modified + interval :interval < NOW() OR collection.modified is NULL )';
     $params[':interval'] = $min_age;
   }
   $sql .= ' ORDER BY modified DESC LIMIT 1';
@@ -65,7 +65,7 @@ function fetch_external ( $bind_id, $min_age = '1 hour', $ua_string )
       curl_setopt ( $curl, CURLOPT_TIMEVALUE, $local_ts->format("U") );
       curl_setopt ( $curl, CURLOPT_TIMECONDITION, CURL_TIMECOND_IFMODSINCE );
       if ( isset( $ua_string ) )
-	  curl_setopt($curl, CURLOPT_USERAGENT, $ua_string);
+        curl_setopt($curl, CURLOPT_USERAGENT, $ua_string);
       dbg_error_log("external", "checking external resource for remote changes " . $row->external_url );
       $ics = curl_exec ( $curl );
       $info = curl_getinfo ( $curl );
@@ -85,7 +85,6 @@ function fetch_external ( $bind_id, $min_age = '1 hour', $ua_string )
     curl_setopt ( $curl, CURLOPT_NOBODY, false );
     curl_setopt ( $curl, CURLOPT_HEADER, false );
     $ics = curl_exec ( $curl );
-    curl_close ( $curl );
     if ( is_string ( $ics ) && strlen ( $ics ) > 20 ) {
       // BUGlet: should track server-time instead of local-time
       $qry = new AwlQuery( 'UPDATE collection SET modified=NOW(), dav_etag=:etag WHERE collection_id = :cid',
@@ -94,7 +93,14 @@ function fetch_external ( $bind_id, $min_age = '1 hour', $ua_string )
       require_once ( 'caldav-PUT-functions.php');
       import_collection ( $ics , $row->user_no, $row->path, 'External Fetch' , false ) ;
       return true;
+    } else {
+      if ( curl_errno($curl) ) {
+        dbg_error_log('ERROR', 'external:Fetch of %s (%s) failed with curl error %s: %s', $row->collection_id, $row->external_url, curl_errno($curl), curl_error($curl));
+      } else {
+        dbg_error_log('ERROR', 'external:Not importing unusual ics data: "%s"', $ics);
+      }
     }
+    curl_close ( $curl );
   }
   else {
     dbg_error_log("external", "external resource up to date or not found id(%s)", $bind_id );
@@ -111,13 +117,13 @@ function update_external ( $request )
     dbg_error_log("external", "external resource cannot be fetched without curl, please install curl");
     return ;
   }
-  $sql = 'SELECT bind_id, external_url as url from dav_binding LEFT JOIN collection ON (collection.collection_id=bound_source_id) WHERE dav_binding.dav_name = :dav_name AND collection.modified + interval :interval < NOW()';
+  $sql = 'SELECT bind_id, external_url as url from dav_binding LEFT JOIN collection ON (collection.collection_id=bound_source_id) WHERE dav_binding.dav_name = :dav_name AND ( collection.modified + interval :interval < NOW() OR collection.modified is NULL )';
   $qry = new AwlQuery( $sql, array ( ':dav_name' => $request->dav_name(), ':interval' => $c->external_refresh . ' minutes' ) );
   dbg_error_log("external", "checking if external resource needs update");
   if ( $qry->Exec('DAVResource') && $qry->rows() > 0 && $row = $qry->Fetch() ) {
     if ( $row->bind_id != 0 ) {
       dbg_error_log("external", "external resource needs updating, this might take a minute : %s", $row->url );
-      fetch_external ( $row->bind_id, $c->external_refresh . ' minutes', $c->external_ua_string );
+      fetch_external ( $row->bind_id, $c->external_refresh . ' minutes', @$c->external_ua_string );
     }
   }
 }

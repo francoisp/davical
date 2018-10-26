@@ -139,7 +139,8 @@ class WritableCollection extends DAVResource {
     else {
       $dtend = 'NULL';
       if ( $first->GetPValue('DURATION') != '' AND $dtstart != '' ) {
-        $duration = preg_replace( '#[PT]#', ' ', $first->GetPValue('DURATION') );
+        $duration = preg_replace( '#[PT]#', '', $first->GetPValue('DURATION') );
+        if ($duration == '') $duration = '0 seconds';
         $dtend = '(:dtstart::timestamp with time zone + :duration::interval)';
         $calitem_params[':duration'] = $duration;
       }
@@ -307,17 +308,17 @@ EOSQL;
 
   /**
   * Given a dav_id and an original vCalendar, pull out each of the VALARMs
-  * and write the values into the calendar_alarm table.
+  * and write the values into the calendar_alarm_dav table.
   *
   * @return null
   */
   function WriteCalendarAlarms( $dav_id, vCalendar $vcal ) {
-    $qry = new AwlQuery('DELETE FROM calendar_alarm WHERE dav_id = '.$dav_id );
+    $qry = new AwlQuery('DELETE FROM calendar_alarm_dav WHERE dav_id = '.$dav_id );
     $qry->Exec('PUT',__LINE__,__FILE__);
 
     $components = $vcal->GetComponents();
 
-    $qry->SetSql('INSERT INTO calendar_alarm ( dav_id, action, trigger, summary, description, component, next_trigger )
+    $qry->SetSql('INSERT INTO calendar_alarm_dav ( dav_id, action, trigger, summary, description, component, next_trigger )
             VALUES( '.$dav_id.', :action, :trigger, :summary, :description, :component,
                                         :related::timestamp with time zone + :related_trigger::interval )' );
     $qry->Prepare();
@@ -343,6 +344,7 @@ EOSQL;
           if ( !preg_match('{^-?P(:?\d+W)?(:?\d+D)?(:?T(:?\d+H)?(:?\d+M)?(:?\d+S)?)?$}', $duration ) ) continue;
           $minus = (substr($duration,0,1) == '-');
           $related_trigger = trim(preg_replace( '#[PT-]#', ' ', $duration ));
+          if ($related_trigger == '') $related_trigger = '0 seconds';
           if ( $minus ) {
             $related_trigger = preg_replace( '{(\d+[WDHMS])}', '-$1 ', $related_trigger );
           }
@@ -368,19 +370,19 @@ EOSQL;
 
   /**
    * Parse out the attendee property and write a row to the
-   * calendar_attendee table for each one.
+   * calendar_attendee_dav table for each one.
    * @param int $dav_id The dav_id of the caldav_data we're processing
    * @param vComponent The VEVENT or VTODO containing the ATTENDEEs
    * @return null
    */
   function WriteCalendarAttendees( $dav_id, vCalendar $vcal ) {
-    $qry = new AwlQuery('DELETE FROM calendar_attendee WHERE dav_id = '.$dav_id );
+    $qry = new AwlQuery('DELETE FROM calendar_attendee_dav WHERE dav_id = '.$dav_id );
     $qry->Exec('PUT',__LINE__,__FILE__);
 
     $attendees = $vcal->GetAttendees();
     if ( count($attendees) < 1 ) return;
 
-    $qry->SetSql('INSERT INTO calendar_attendee ( dav_id, status, partstat, cn, attendee, role, rsvp, property )
+    $qry->SetSql('INSERT INTO calendar_attendee_dav ( dav_id, status, partstat, cn, attendee, role, rsvp, property )
             VALUES( '.$dav_id.', :status, :partstat, :cn, :attendee, :role, :rsvp, :property )' );
     $qry->Prepare();
     $processed = array();

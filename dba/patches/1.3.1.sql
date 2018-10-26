@@ -22,10 +22,10 @@ INSERT INTO calendar_attendee_email_status (email_status_id, description)
 ;
 
 
-ALTER TABLE calendar_attendee
+ALTER TABLE calendar_attendee_dav
   ADD COLUMN email_status INT REFERENCES calendar_attendee_email_status(email_status_id) DEFAULT 1 NOT NULL ;
 
-ALTER TABLE calendar_attendee
+ALTER TABLE calendar_attendee_dav
   ADD COLUMN is_remote BOOLEAN DEFAULT FALSE;
 
 -- A new year!  http://blogs.transparent.com/polish/names-of-the-months-and-their-meaning/

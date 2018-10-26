@@ -35,8 +35,8 @@ if [ -z "${AWLDIR}" ] ; then
     exit 1
 fi
 
-export AWL_DBAUSER=davical_dba
-export AWL_APPUSER=davical_app
+AWL_DBAUSER="${3:-davical_dba}"
+AWL_APPUSER="${4:-davical_app}"
 
 # set -x
 

@@ -220,7 +220,10 @@ class DAVPrincipal extends Principal
       }
     }
 
-    $sql = 'SELECT principal_id, username, pprivs(:request_principal::int8,principal_id,:scan_depth::int) FROM principal JOIN usr USING(user_no) WHERE usr.active=true AND principal_id IN (SELECT * from grants_proxy_access_from_p(:request_principal,:scan_depth))';
+    /* grants_proxy_access_from_p() is too clever and doesn't return any results, so do it on foot
+    $sql = 'SELECT principal_id, username, pprivs(principal_id,:request_principal::int8,:scan_depth::int) FROM principal JOIN usr USING(user_no) WHERE usr.active=true AND principal_id IN (SELECT * from grants_proxy_access_from_p(:request_principal,:scan_depth))';
+     */
+    $sql = 'SELECT principal_id, username, pprivs(principal_id,:request_principal::int8,:scan_depth::int) FROM principal JOIN usr USING(user_no) WHERE usr.active=true AND principal_id IN (SELECT to_principal FROM grants WHERE by_principal = :request_principal AND (privileges & 5::BIT(24)) != 0::BIT(24) AND by_collection IS NULL AND to_principal != :request_principal )';
     $qry = new AwlQuery($sql, $params ); // reuse $params assigned for earlier query
     if ( $qry->Exec('DAVPrincipal') && $qry->rows() > 0 ) {
       while( $relationship = $qry->Fetch() ) {
@@ -448,7 +451,7 @@ class DAVPrincipal extends Principal
   * Returns properties which are specific to this principal
   */
   function PrincipalProperty( $tag, $prop, &$reply, &$denied ) {
-    global $c, $request;
+    global $c;
 
     dbg_error_log('principal',':PrincipalProperty: Principal Property "%s"', $tag );
     switch( $tag ) {
@@ -485,26 +488,13 @@ class DAVPrincipal extends Principal
 
       case 'http://calendarserver.org/ns/:group-member-set':
       case 'DAV::group-member-set':
-        if ( $request->IsProxyRequest() ) {
-          /** calendar-proxy-{read,write} pseudo-principal, see caldav-proxy 3.2 */
-          if ($request->proxy_type == 'read') {
-            $reply->DAVElement( $prop, 'group-member-set', $reply->href($this->ReadProxyGroup()) );
-          } else {
-            $reply->DAVElement( $prop, 'group-member-set', $reply->href($this->WriteProxyGroup()) );
-          }
-        } else {
-          /** regular group principal */
-          if ( ! $this->_is_group ) return false;
-          $reply->DAVElement( $prop, 'group-member-set', $reply->href($this->group_member_set) );
-        }
+        /** regular group principal, the calendar-proxy pseudo-principal is handled in DAVResource */
+        if ( ! $this->_is_group ) return false;
+        $reply->DAVElement( $prop, 'group-member-set', $reply->href($this->group_member_set) );
         break;
 
       case 'http://calendarserver.org/ns/:group-membership':
       case 'DAV::group-membership':
-        if ( $request->IsProxyRequest() ) {
-          /* the calendar-proxy-{read,write} pseudo-principal should not be a member of any group */
-          return false;
-        }
         $reply->DAVElement( $prop, 'group-membership', $reply->href($this->GroupMembership()) );
         break;
 

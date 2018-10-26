@@ -1,3 +1,50 @@
+2018-01-11 Florian Schlichting <fsfs@debian.org>
+	* switch to doxygen for api docs
+	* put the most important debug options in a more visible place
+
+2016-01-21 Frank Steinberg <steinberg@ibr.cs.tu-bs.de>
+	* Improved handling of event modifications
+
+2016-06-23 Andrew McMillan <andrew@mcmillan.net.nz>
+	* Fix common etag match code, use it everywhere.
+	* Tidy up some PHPdoc in DAVResource
+
+2018-01-10 Jean-Baptiste Guerraz <jbguerraz@skilld.fr>
+	* use php ldap explode in order to be compatible with any dn
+	* sync ldap user - reactivate
+
+2018-01-09 Andrew McMillan <andrew@mcmillan.net.nz>
+	* Correctly handle durations without units like "PT"
+
+2018-01-09 Florian Schlichting <fsfs@debian.org>
+	* add regression tests for iCal handling calendar delegations
+	* drop tests/regression-suite/0528, same as 0527
+	* rename DAVResource->_is_proxy_request to _is_proxy_resource
+	* Finally: implement managing calendar delegations from iCal
+	* group-member-set and group-membership queries on proxy resources should be handled in DAVResource
+	* update regression tests due to FetchProxyGroups changes
+	* DAVPrincipal->FetchProxyGroups(): disable grants_proxy_access_from_p()
+	* DAVPrincipal->FetchProxyGroups(): invert arguments to pprivs()
+
+2018-01-08 Florian Schlichting <fsfs@debian.org>
+	* add DAVResource->IsProxyCollection()
+
+2018-01-07 Florian Schlichting <fsfs@debian.org>
+	* advertise support for principal-match REPORT
+	* clean up obsolete code: supported_methods and supported_reports was moved to DAVResource
+
+2018-01-04 Florian Schlichting <fsfs@debian.org>
+	* update doc and fix a warning
+
+2018-01-03 Florian Schlichting <fsfs@debian.org>
+	* UI: create external bindings with type set (fix: #132)
+
+2017-11-20 CSchulz <christian@schulz.re>
+	* add PT to follow alias
+
+2017-10-25 Florian Schlichting <fsfs@debian.org>
+	* Document $c->hide_bound and $c->disable_caldav_proxy_propfind_collections config options
+
 2017-10-09 Florian Schlichting <fsfs@debian.org>
 	* 'perl update-davical-database' did not find the intended config file / patchdir
 

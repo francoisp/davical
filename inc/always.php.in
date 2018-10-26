@@ -344,6 +344,7 @@ function getStatusMessage($status) {
 * Construct a URL from the supplied dav_name.  The URL will be urlencoded,
 * except for any '/' characters in it.
 * @param string $partial_path  The part of the path after the script name
+* @param boolean $force_script  Whether to force-include caldav.php in the URL. Defaults to false.
 */
 function ConstructURL( $partial_path, $force_script = false ) {
   global $c;
@@ -379,9 +380,9 @@ function ConstructURL( $partial_path, $force_script = false ) {
 /**
 * Deconstruct a dav_name from the supplied URL.  The dav_name will be urldecoded.
 *
-* @param string $partial_path  The part of the path after the script name
+* @param string $url  The full path including the script name
 */
-function DeconstructURL( $url, $force_script = false ) {
+function DeconstructURL( $url ) {
   global $c;
 
   $dav_name = rawurldecode($url);

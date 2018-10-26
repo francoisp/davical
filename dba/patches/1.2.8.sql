@@ -66,7 +66,7 @@ CREATE TABLE addressbook_address_email (
 );
 
 
-CREATE TABLE calendar_alarm (
+CREATE TABLE calendar_alarm_dav (
   dav_id INT8 NOT NULL REFERENCES caldav_data(dav_id) ON UPDATE CASCADE ON DELETE CASCADE,
   action TEXT,
   trigger TEXT,
@@ -76,7 +76,7 @@ CREATE TABLE calendar_alarm (
   component TEXT -- The full text of the component
 );
 
-CREATE TABLE calendar_attendee (
+CREATE TABLE calendar_attendee_dav (
   dav_id INT8 NOT NULL REFERENCES caldav_data(dav_id) ON UPDATE CASCADE ON DELETE CASCADE,
   status TEXT,
   partstat TEXT,

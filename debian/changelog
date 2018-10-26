@@ -1,3 +1,12 @@
+davical (1.1.7-1) unstable; urgency=medium
+
+  * New upstream release
+  * Bump dependency on AWL to 0.59
+  * Declare compliance with Debian Policy 4.1.3
+  * Update lintian-overrides
+
+ -- Florian Schlichting <fsfs@debian.org>  Fri, 12 Jan 2018 00:04:06 +0100
+
 davical (1.1.6-1) unstable; urgency=medium
 
   * New upstream release (closes: #704069, #784282, #856467)
@@ -49,7 +58,7 @@ davical (1.1.4-1) unstable; urgency=medium
     references since it was moved to its own git repository.
   * Don't run make / make built-docs during package build to avoid nasty
     surprises; files should be up-to-date in git anyway
-  * Purge /etc/davical/.keep directory 
+  * Purge /etc/davical/.keep directory
   * Clean source tree before creating orig-source tarball
 
  -- Florian Schlichting <fsfs@debian.org>  Mon, 11 Jan 2016 23:56:48 +0100

@@ -59,7 +59,7 @@ class PublicSession {
   /**
   * The constructor, which just calls the actual type configured
   */
-  function PublicSession() {
+  function __construct() {
     global $c;
 
     $principal = new Principal('username','unauthenticated');

@@ -244,8 +244,8 @@ if ( function_exists('awl_set_locale') ) {
 *
 */
 $c->code_version = 0;
-$c->want_awl_version = '0.58';
-$c->version_string = '1.1.6'; // The actual version # is replaced into that during the build /release process
+$c->want_awl_version = '0.59';
+$c->version_string = '1.1.7'; // The actual version # is replaced into that during the build /release process
 if ( isset($c->version_string) && preg_match( '/(\d+)\.(\d+)\.(\d+)(.*)/', $c->version_string, $matches) ) {
   $c->code_major = $matches[1];
   $c->code_minor = $matches[2];
@@ -344,6 +344,7 @@ function getStatusMessage($status) {
 * Construct a URL from the supplied dav_name.  The URL will be urlencoded,
 * except for any '/' characters in it.
 * @param string $partial_path  The part of the path after the script name
+* @param boolean $force_script  Whether to force-include caldav.php in the URL. Defaults to false.
 */
 function ConstructURL( $partial_path, $force_script = false ) {
   global $c;
@@ -379,9 +380,9 @@ function ConstructURL( $partial_path, $force_script = false ) {
 /**
 * Deconstruct a dav_name from the supplied URL.  The dav_name will be urldecoded.
 *
-* @param string $partial_path  The part of the path after the script name
+* @param string $url  The full path including the script name
 */
-function DeconstructURL( $url, $force_script = false ) {
+function DeconstructURL( $url ) {
   global $c;
 
   $dav_name = rawurldecode($url);

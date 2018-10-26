@@ -4,8 +4,8 @@ HTTP/1.1 207 Multi-Status
 Date: Dow, 01 Jan 2000 00:00:00 GMT
 DAV: 1, 2, 3, access-control, calendar-access, calendar-schedule
 DAV: extended-mkcol, bind, addressbook, calendar-auto-schedule, calendar-proxy
-ETag: "e76e5a37264c0b44f88f8456c27a7aaa"
-Content-Length: 27747
+ETag: "bfe10a3d02ee0ad8aa1d767e4c779d9e"
+Content-Length: 28674
 Content-Type: text/xml; charset="utf-8"
 
 <?xml version="1.0" encoding="utf-8" ?>
@@ -78,6 +78,11 @@ Content-Type: text/xml; charset="utf-8"
      <supported-report>
       <report>
        <expand-property/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
+       <principal-match/>
       </report>
      </supported-report>
      <supported-report>
@@ -206,6 +211,11 @@ Content-Type: text/xml; charset="utf-8"
      </supported-report>
      <supported-report>
       <report>
+       <principal-match/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
        <sync-collection/>
       </report>
      </supported-report>
@@ -300,7 +310,7 @@ Content-Type: text/xml; charset="utf-8"
     </current-user-privilege-set>
     <displayname>user1 addresses</displayname>
     <C:getctag>"24c9e15e52afc47c225b757e7bee1f9d"</C:getctag>
-    <C2:max-resource-size>65500</C2:max-resource-size>
+    <C2:max-resource-size/>
     <owner>
      <href>/caldav.php/user1/</href>
     </owner>
@@ -328,6 +338,11 @@ Content-Type: text/xml; charset="utf-8"
      <supported-report>
       <report>
        <expand-property/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
+       <principal-match/>
       </report>
      </supported-report>
      <supported-report>
@@ -458,6 +473,11 @@ Content-Type: text/xml; charset="utf-8"
      <supported-report>
       <report>
        <expand-property/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
+       <principal-match/>
       </report>
      </supported-report>
      <supported-report>
@@ -606,6 +626,11 @@ Content-Type: text/xml; charset="utf-8"
      </supported-report>
      <supported-report>
       <report>
+       <principal-match/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
        <sync-collection/>
       </report>
      </supported-report>
@@ -735,6 +760,11 @@ Content-Type: text/xml; charset="utf-8"
      </supported-report>
      <supported-report>
       <report>
+       <principal-match/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
        <sync-collection/>
       </report>
      </supported-report>
@@ -856,6 +886,11 @@ Content-Type: text/xml; charset="utf-8"
      </supported-report>
      <supported-report>
       <report>
+       <principal-match/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
        <sync-collection/>
       </report>
      </supported-report>
@@ -953,7 +988,7 @@ Content-Type: text/xml; charset="utf-8"
      </privilege>
     </current-user-privilege-set>
     <displayname>/user1/calendar-proxy-read/</displayname>
-    <C:getctag>"abad5538c4aa570cc54b6ff0d36a4565"</C:getctag>
+    <C:getctag>"27f3230cc54eece931a3881045b951ad"</C:getctag>
     <owner>
      <href>/caldav.php/user1/</href>
     </owner>
@@ -979,6 +1014,11 @@ Content-Type: text/xml; charset="utf-8"
      <supported-report>
       <report>
        <expand-property/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
+       <principal-match/>
       </report>
      </supported-report>
      <supported-report>
@@ -1093,7 +1133,7 @@ Content-Type: text/xml; charset="utf-8"
      </privilege>
     </current-user-privilege-set>
     <displayname>/user1/calendar-proxy-write/</displayname>
-    <C:getctag>"04ba2c2164225fb5abce13f2c523b6c7"</C:getctag>
+    <C:getctag>"1fe22bc6877accf64891e7c9c5428b86"</C:getctag>
     <owner>
      <href>/caldav.php/user1/</href>
     </owner>
@@ -1119,6 +1159,11 @@ Content-Type: text/xml; charset="utf-8"
      <supported-report>
       <report>
        <expand-property/>
+      </report>
+     </supported-report>
+     <supported-report>
+      <report>
+       <principal-match/>
       </report>
      </supported-report>
      <supported-report>

@@ -89,7 +89,7 @@ require_once('vCalendar.php');
 /**
 * Essentially what we are doing is:
 *
-UPDATE calendar_alarm
+UPDATE calendar_alarm_dav
   SET next_trigger = (SELECT rrule_event_instances_range(
                         dtstart + icalendar_interval_to_SQL(replace(trigger,'TRIGGER:','')),
                         rrule,
@@ -97,7 +97,7 @@ UPDATE calendar_alarm
                         1)
                      LIMIT 1)
  FROM calendar_item
-WHERE calendar_alarm.dav_id = calendar_item.dav_id
+WHERE calendar_alarm_dav.dav_id = calendar_item.dav_id
   AND next_trigger is null
   AND rrule IS NOT NULL
 
@@ -113,7 +113,7 @@ $earliest->modify( $args->near_past );
 
 if ( $args->debug ) printf( "Looking for event instances between '%s' and '%s'\n", $earliest->UTC(), $expand_range_end->UTC() );
 
-$sql = 'SELECT * FROM calendar_alarm JOIN calendar_item USING (dav_id) JOIN caldav_data USING (dav_id) WHERE rrule IS NOT NULL AND next_trigger IS NULL';
+$sql = 'SELECT * FROM calendar_alarm_dav JOIN calendar_item USING (dav_id) JOIN caldav_data USING (dav_id) WHERE rrule IS NOT NULL AND next_trigger IS NULL';
 if ( $args->debug ) printf( "%s\n", $sql );
 $qry = new AwlQuery( $sql );
 if ( $qry->Exec() && $qry->rows() ) {
@@ -161,16 +161,16 @@ if ( $qry->Exec() && $qry->rows() ) {
       $range = getVCalendarRange($vc);
       if ( isset($range->until) && $range->until < $earliest ) $last = $range->until;
     }
-    
+
     if ( isset($next) && $next < $expand_range_end ) {
       if ( $args->debug ) printf( "refresh: Found next alarm instance on '%s'\n", $next->UTC() );
-      $sql = 'UPDATE calendar_alarm SET next_trigger = :next WHERE dav_id = :id AND component = :component';
+      $sql = 'UPDATE calendar_alarm_dav SET next_trigger = :next WHERE dav_id = :id AND component = :component';
       $update = new AwlQuery( $sql, array( ':next' => $next->UTC(), ':id' => $alarm->dav_id, ':component' => $alarm->component ) );
       $update->Exec('refresh-alarms', __LINE__, __FILE__ );
     }
     else if ( $args->set_last && isset($last) && $last < $earliest ) {
       if ( $args->debug ) printf( "refresh: Found past final alarm instance on '%s'\n", $last->UTC() );
-      $sql = 'UPDATE calendar_alarm SET next_trigger = :last WHERE dav_id = :id AND component = :component';
+      $sql = 'UPDATE calendar_alarm_dav SET next_trigger = :last WHERE dav_id = :id AND component = :component';
       $update = new AwlQuery( $sql, array( ':last' => $last->UTC(), ':id' => $alarm->dav_id, ':component' => $alarm->component ) );
       $update->Exec('refresh-alarms', __LINE__, __FILE__ );
     }

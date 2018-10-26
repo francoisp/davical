@@ -60,7 +60,7 @@ class HTTPAuthSession {
   /**
   * The constructor, which just calls the type supplied or configured
   */
-  function HTTPAuthSession() {
+  function __construct() {
     global $c;
 
     if ( ! empty($_SERVER['PHP_AUTH_DIGEST'])) {

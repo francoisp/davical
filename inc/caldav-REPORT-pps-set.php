@@ -25,6 +25,10 @@ $principal_search_property_set = array(
   'urn:ietf:params:xml:ns:caldav:calendar-user-address-set'
 );
 
+if ( $request->depth > 0 ) {
+  $request->DoResponse( 400, 'The principal-search-property-set REPORT is only defined for Depth "0".' );
+}
+
 $responses = array();
 foreach( $principal_search_property_set AS $k => $tag ) {
   $responses[] = property_response( $reply, $tag );

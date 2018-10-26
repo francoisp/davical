@@ -2,8 +2,8 @@ HTTP/1.1 207 Multi-Status
 Date: Dow, 01 Jan 2000 00:00:00 GMT
 DAV: 1, 2, 3, access-control, calendar-access, calendar-schedule
 DAV: extended-mkcol, bind, addressbook, calendar-auto-schedule, calendar-proxy
-ETag: "5379cc33938a9b800403f94bdfec0571"
-Content-Length: 1091
+ETag: "68b03f180d5f9046907a86251de16246"
+Content-Length: 1055
 Content-Type: text/xml; charset="utf-8"
 
 <?xml version="1.0" encoding="utf-8" ?>
@@ -12,7 +12,7 @@ Content-Type: text/xml; charset="utf-8"
   <href>/caldav.php/manager1/calendar-proxy-read/</href>
   <propstat>
    <prop>
-    <C:getctag>"ccdfbfa2e7ee6c47d3ea8f134d415b89"</C:getctag>
+    <C:getctag>"9c7765219569248441a5a04569ca6b94"</C:getctag>
     <displayname>/manager1/calendar-proxy-read/</displayname>
     <resourcetype>
      <principal/>
@@ -20,9 +20,9 @@ Content-Type: text/xml; charset="utf-8"
      <C:calendar-proxy-read/>
     </resourcetype>
     <group-member-set>
-     <href>/caldav.php/user1/</href>
-     <href>/caldav.php/assistant1/</href>
+     <href>/caldav.php/teamclient1/</href>
     </group-member-set>
+    <group-membership/>
     <C:calendar-proxy-read-for>
      <href>/caldav.php/user1/</href>
      <href>/caldav.php/assistant1/</href>
@@ -36,7 +36,6 @@ Content-Type: text/xml; charset="utf-8"
   <propstat>
    <prop>
     <C1:calendar-description/>
-    <group-membership/>
    </prop>
    <status>HTTP/1.1 404 Not Found</status>
   </propstat>

@@ -110,6 +110,44 @@ $c->admin_email ='calendar-admin@example.com';
 
 /***************************************************************************
 *                                                                          *
+*                         Debug Options                                    *
+*                                                                          *
+***************************************************************************/
+
+/**
+* Whenever you think you've found an issue with how DAViCal handles a situation,
+* generating some data on what it's actually doing and whether it can find a
+* certain event in the database etc. can be essential to allow others (or
+* yourself) to understand what's going wrong.
+*
+* There are many different types of debug messages (for more details see
+* debug-config.php), but this will log them all:
+*/
+// $c->dbg["ALL"] = 1;
+
+/**
+* While the above setting will quickly fill your PHP error log and should best
+* be restricted to one or two requests, logging just the client interaction
+* is almost as useful. This should be the minimum for any support request on
+* the mailing list or issue tracker.
+*/
+// $c->dbg["request"] = 1;   // The request headers & content
+// $c->dbg['response'] = 1;  // The response headers & content
+
+/**
+* Even on a moderately busy server, turning on debug logging for everyone can
+* produce a lot of output in a short time that makes it hard to find the
+* relevant lines. Debug filtering limits logging to certain IP addresses or
+* usernames. (config values are arrays)
+*/
+// $c->dbg_filter["remoteIP"][] = '192.168.1.20';
+// $c->dbg_filter["remoteIP"][] = '192.168.1.21';
+// $c->dbg_filter["authenticatedUser"][] = 'peter';
+// $c->dbg_filter["authenticatedUser"][] = 'john';
+
+
+/***************************************************************************
+*                                                                          *
 *                         Caldav Server                                    *
 *                                                                          *
 ***************************************************************************/

@@ -466,89 +466,6 @@ EOSQL;
     */
     $this->setPermissions();
 
-    $this->supported_methods = array(
-      'OPTIONS' => '',
-      'PROPFIND' => '',
-      'REPORT' => '',
-      'DELETE' => '',
-      'LOCK' => '',
-      'UNLOCK' => '',
-      'MOVE' => '',
-      'ACL' => ''
-    );
-    if ( $this->IsCollection() ) {
-      switch ( $this->collection_type ) {
-        case 'root':
-        case 'email':
-          // We just override the list completely here.
-          $this->supported_methods = array(
-            'OPTIONS' => '',
-            'PROPFIND' => '',
-            'REPORT' => ''
-          );
-          break;
-        case 'schedule-inbox':
-        case 'schedule-outbox':
-          $this->supported_methods = array_merge(
-            $this->supported_methods,
-            array(
-              'POST' => '', 'GET' => '', 'PUT' => '', 'HEAD' => '', 'PROPPATCH' => ''
-            )
-          );
-          break;
-        case 'calendar':
-          $this->supported_methods['GET'] = '';
-          $this->supported_methods['PUT'] = '';
-          $this->supported_methods['HEAD'] = '';
-          break;
-        case 'collection':
-        case 'principal':
-          $this->supported_methods['GET'] = '';
-          $this->supported_methods['PUT'] = '';
-          $this->supported_methods['HEAD'] = '';
-          $this->supported_methods['MKCOL'] = '';
-          $this->supported_methods['MKCALENDAR'] = '';
-          $this->supported_methods['PROPPATCH'] = '';
-          $this->supported_methods['BIND'] = '';
-          break;
-      }
-    }
-    else {
-      $this->supported_methods = array_merge(
-        $this->supported_methods,
-        array(
-          'GET' => '',
-          'HEAD' => '',
-          'PUT' => ''
-        )
-      );
-    }
-
-    $this->supported_reports = array(
-      'DAV::principal-property-search' => '',
-      'DAV::expand-property' => '',
-      'DAV::sync-collection' => ''
-    );
-    if ( isset($this->collection) && $this->collection->is_calendar ) {
-      $this->supported_reports = array_merge(
-        $this->supported_reports,
-        array(
-          'urn:ietf:params:xml:ns:caldav:calendar-query' => '',
-          'urn:ietf:params:xml:ns:caldav:calendar-multiget' => '',
-          'urn:ietf:params:xml:ns:caldav:free-busy-query' => ''
-        )
-      );
-    }
-    if ( isset($this->collection) && $this->collection->is_addressbook ) {
-      $this->supported_reports = array_merge(
-        $this->supported_reports,
-        array(
-          'urn:ietf:params:xml:ns:carddav:addressbook-query' => '',
-          'urn:ietf:params:xml:ns:carddav:addressbook-multiget' => ''
-        )
-      );
-    }
-
 
     /**
     * If the content we are receiving is XML then we parse it here.  RFC2518 says we
@@ -1142,7 +1059,8 @@ EOSQL;
       else
         $trim_chars = ' ';
 
-      if ( isset($this->etag_if_match) && $this->etag_if_match != '' && trim( $this->etag_if_match, $trim_chars) != trim( $dest_etag, $trim_chars ) ) {
+      if ( isset($this->etag_if_match) && $this->etag_if_match != '' && $this->etag_if_match != '*'
+              && trim( $this->etag_if_match, $trim_chars) != trim( $dest_etag, $trim_chars ) ) {
         /**
         * RFC2068, 14.25:
         * If none of the entity tags match, or if "*" is given and no current

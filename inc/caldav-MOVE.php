@@ -57,31 +57,7 @@ if ( $src->IsCollection() ) {
   };
 }
 else {
-  if ( (isset($request->etag_if_match) && $request->etag_if_match != '' )
-        || ( isset($request->etag_none_match) && $request->etag_none_match != '') ) {
-
-    /**
-    * RFC2068, 14.25:
-    * If none of the entity tags match, or if "*" is given and no current
-    * entity exists, the server MUST NOT perform the requested method, and
-    * MUST return a 412 (Precondition Failed) response.
-    *
-    * RFC2068, 14.26:
-    * If any of the entity tags match the entity tag of the entity that
-    * would have been returned in the response to a similar GET request
-    * (without the If-None-Match header) on that resource, or if "*" is
-    * given and any current entity exists for that resource, then the
-    * server MUST NOT perform the requested method.
-    */
-    $error = '';
-    if ( isset($request->etag_if_match) && $request->etag_if_match != $src->unique_tag() ) {
-      $error = translate( 'Existing resource does not match "If-Match" header - not accepted.');
-    }
-    else if ( isset($request->etag_none_match) && $request->etag_none_match != '' && $request->etag_none_match == $src->unique_tag() ) {
-      $error = translate( 'Existing resource matches "If-None-Match" header - not accepted.');
-    }
-    if ( $error != '' ) $request->DoResponse( 412, $error );
-  }
+  $request->CheckEtagMatch( $src->Exists(), $src->unique_tag() );
 }
 
 $src->NeedPrivilege('DAV::unbind');

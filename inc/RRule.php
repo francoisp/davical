@@ -562,7 +562,7 @@ class RepeatRuleDateRange {
     if ( $this->until == null ) return ($other->until > $this->from);
     if ( $this->from == null ) return ($other->from < $this->until);
     if ( $other->until == null ) return ($this->until > $other->from);
-    if ( $other->from == null ) return ($thi->from < $other->until);
+    if ( $other->from == null ) return ($this->from < $other->until);
 
     return !( $this->until < $other->from || $this->from > $other->until );
   }

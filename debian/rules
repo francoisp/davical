@@ -21,4 +21,5 @@ override_dh_installchangelogs:
 
 override_dh_installdocs:
 	dh_installdocs
+	find debian/davical-doc/ -name '*.md5' -delete
 	jdupes -rl debian/davical-doc/

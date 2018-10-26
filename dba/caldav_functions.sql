@@ -1244,7 +1244,7 @@ BEGIN
       RETURN NULL;
     END IF;
   END IF;
-  
+
   -- Find the most recent sync_token
   SELECT sync_token, modification_time INTO new_token, old_modification_time FROM sync_tokens
          WHERE collection_id = in_collection_id ORDER BY modification_time DESC LIMIT 1;
@@ -1255,25 +1255,25 @@ BEGIN
       RETURN new_token;
     END IF;
   END IF;
-  
+
   -- Looks like we need a new sync_token for this collection...
   SELECT nextval('sync_tokens_sync_token_seq') INTO new_token;
   INSERT INTO sync_tokens(collection_id, sync_token) VALUES( in_collection_id, new_token );
-  
+
   -- Having created our new token we do some clean-up of old tokens
   SELECT modification_time, sync_token INTO old_modification_time, tmp_int FROM sync_tokens
   		WHERE collection_id = in_collection_id AND modification_time < (current_timestamp - '7 days'::interval)
   		ORDER BY collection_id, modification_time DESC;
   DELETE FROM sync_changes WHERE collection_id = in_collection_id AND sync_time < old_modification_time;
   DELETE FROM sync_tokens WHERE collection_id = in_collection_id AND sync_token < tmp_int;
-  
+
   -- Returning the new token
   RETURN new_token;
 END
 $$ LANGUAGE plpgsql STRICT;
 
 
-DROP TRIGGER IF EXISTS alarm_changed ON calendar_alarm CASCADE;
+DROP TRIGGER IF EXISTS alarm_changed ON calendar_alarm_dav CASCADE;
 CREATE or REPLACE FUNCTION alarm_changed() RETURNS TRIGGER AS $$
 DECLARE
   oldcomponent TEXT;
@@ -1291,7 +1291,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER alarm_changed AFTER UPDATE ON calendar_alarm
+CREATE TRIGGER alarm_changed AFTER UPDATE ON calendar_alarm_dav
     FOR EACH ROW EXECUTE PROCEDURE alarm_changed();
 
 CREATE or REPLACE FUNCTION real_path_exists( TEXT ) RETURNS BOOLEAN AS $$

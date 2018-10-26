@@ -16,8 +16,8 @@ nodocs: htdocs/always.php built-locale
 .PHONY: all
 all: htdocs/always.php built-docs built-locale
 
-built-docs: docs/phpdoc.ini htdocs/*.php inc/*.php docs/translation.rst
-	apigen generate --quiet --title=DAViCal --todo --tree --deprecated -s inc -s htdocs --exclude caldav-client.php -d docs/api || phpdoc -c docs/phpdoc.ini || echo "NOTICE: Failed to build API docs"
+built-docs: docs/phpdoc.ini docs/Doxyfile inc/*.php docs/translation.rst
+	doxygen docs/Doxyfile || apigen generate --quiet --title=DAViCal --todo --tree --deprecated -s inc --exclude caldav-client.php -d docs/api || phpdoc -c docs/phpdoc.ini || echo "NOTICE: Failed to build API docs"
 	rst2pdf docs/translation.rst || echo "NOTICE: Failed to build ReST docs"
 	touch $@
 

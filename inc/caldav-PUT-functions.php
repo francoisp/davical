@@ -622,6 +622,7 @@ function do_scheduling_requests( vCalendar $resource, $create, $old_data = null 
       if ( !$qry->Exec('PUT',__LINE__,__FILE__) || $qry->rows() < 1 ) {
         dbg_error_log( 'PUT', "Could not find event in attendee's calendars" );
         $attendee_calendar = new WritableCollection(array('path' => $schedule_target->internal_url('schedule-default-calendar')));
+        unset($row); // signal "not found" below
       } else {
         $row = $qry->Fetch();
         $r = new DAVResource($row);
@@ -639,13 +640,40 @@ function do_scheduling_requests( vCalendar $resource, $create, $old_data = null 
         $response = '5.2';  // No scheduling support for user
       }
       else {
+        if ($attendee_is_new || !$row) {
+          $this_schedule_request = clone($schedule_request);
+          $this_resource = clone($resource);
+        } else {
+          dbg_error_log('PUT',"adjusting only some major properties in %s's instance of the event", $schedule_target->username());
+          $this_resource = new vCalendar($row->caldav_data);
+          $these_events = $this_resource->GetComponents("VEVENT");
+          $this_event = $these_events[0];
+          $events = $resource->GetComponents("VEVENT");
+          $event = $events[0];
+          // ??? CLASS, CREATED, LAST-MODIFIED, ATTENDEE, ORGANIZER, others???
+          $this_event->SetProperties( $event->GetProperties('DTSTAMP'), 'DTSTAMP' );
+          $this_event->SetProperties( $event->GetProperties('SEQUENCE'), 'SEQUENCE' );
+          $this_event->SetProperties( $event->GetProperties('DTSTART'), 'DTSTART' );
+          $this_event->SetProperties( $event->GetProperties('DTEND'), 'DTEND' );
+          $this_event->SetProperties( $event->GetProperties('DURATION'), 'DURATION' );
+          $this_event->SetProperties( $event->GetProperties('SUMMARY'), 'SUMMARY' );
+          $this_event->SetProperties( $event->GetProperties('LOCATION'), 'LOCATION' );
+          $this_event->SetProperties( $event->GetProperties('DESCRIPTION'), 'DESCRIPTION' );
+          $this_event->SetProperties( $event->GetProperties('GEO'), 'GEO' );
+          $this_event->SetProperties( $event->GetProperties('RESOURCES'), 'RESOURCES' );
+          $this_event->SetProperties( $event->GetProperties('STATUS'), 'STATUS' );
+          $this_event->SetProperties( $event->GetProperties('ATTENDEE'), 'ATTENDEE' );
+          $this_resource->SetComponents($these_events, "VEVENT");
+          $this_schedule_request = clone($this_resource);
+          $this_schedule_request->AddProperty('METHOD', 'REQUEST');
+        }
         $attendee_inbox = new WritableCollection(array('path' => $schedule_target->internal_url('schedule-inbox')));
         if ( ! $attendee_inbox->HavePrivilegeTo('schedule-deliver-invite') ) {
           $response = '3.8';  // No authority to deliver invitations to user.
         }
-        else if ( $attendee_inbox->WriteCalendarMember($schedule_request, $attendee_is_new) !== false ) {
+        else if ( $attendee_inbox->WriteCalendarMember($this_schedule_request, $attendee_is_new) !== false ) {
           $response = '1.2';  // Scheduling invitation delivered successfully
-          if ( $attendee_calendar->WriteCalendarMember($orig_resource, $attendee_is_new) === false ) {
+          if ( $attendee_calendar->WriteCalendarMember($this_resource, $attendee_is_new) === false ) {
                 dbg_error_log('ERROR','Could not write %s calendar member to %s', ($attendee_is_new?'new':'updated'),
                         $attendee_calendar->dav_name(), $attendee_calendar->dav_name(), $schedule_target->username());
                 trace_bug('Failed to write scheduling resource.');
@@ -681,9 +709,52 @@ function do_scheduling_requests( vCalendar $resource, $create, $old_data = null 
 
   if ( !$create ) {
     foreach( $removed_attendees AS $attendee ) {
+      $email = preg_replace( '/^mailto:/i', '', $attendee->Value() );
       $schedule_target = new Principal('email',$email);
       if ( $schedule_target->Exists() ) {
-        $attendee_calendar = new WritableCollection(array('path' => $schedule_target->internal_url('schedule-default-calendar')));
+        // Instead of always writing to schedule-default-calendar, we first try to
+        // find a calendar with an existing instance of the event.
+        $sql = 'SELECT caldav_data.dav_name, caldav_data.caldav_data, caldav_data.collection_id FROM caldav_data JOIN calendar_item USING(dav_id) ';
+        $sql .= 'WHERE caldav_data.collection_id IN (SELECT collection_id FROM collection WHERE is_calendar AND user_no =?) ';
+        $sql .= 'AND uid=? LIMIT 1';
+        $qry = new AwlQuery($sql,$schedule_target->user_no(), $uid);
+        if ( !$qry->Exec('PUT',__LINE__,__FILE__) || $qry->rows() < 1 ) {
+          dbg_error_log( 'PUT', "Could not find event in attendee's calendars" );
+          $attendee_calendar = new WritableCollection(array('path' => $schedule_target->internal_url('schedule-default-calendar')));
+        } else {
+          $row = $qry->Fetch();
+          $r = new DAVResource($row);
+          $attendee_calendar = new WritableCollection(array('path' => $r->parent_path()));
+          if ($attendee_calendar->IsCalendar()) {
+            dbg_error_log( 'PUT', "found the event in attendee's calendar %s", $attendee_calendar->dav_name() );
+          } else {
+            dbg_error_log( 'PUT', 'could not find the event in any calendar, using schedule-default-calendar');
+            $attendee_calendar = new WritableCollection(array('path' => $schedule_target->internal_url('schedule-default-calendar')));
+          }
+          dbg_error_log('PUT',"marking %s's instance of the event to show that the user's invitation has been revoked", $schedule_target->username());
+          $this_resource = new vCalendar($row->caldav_data);
+          $these_events = $this_resource->GetComponents("VEVENT");
+          $this_event = $these_events[0];
+          $properties[] = new vProperty( "DESCRIPTION:Your invitation to this event has been revoked." );
+          $this_event->SetProperties( $properties, 'DESCRIPTION' );
+          $properties[] = new vProperty( "STATUS:CANCELLED" );
+          $this_event->SetProperties( $properties, 'STATUS' );
+          $this_event->SetProperties( null, 'ATTENDEE' );
+          $this_resource->SetComponents($these_events, "VEVENT");
+          $this_schedule_request = clone($this_resource);
+          $this_schedule_request->AddProperty('METHOD', 'REQUEST');
+          $attendee_inbox = new WritableCollection(array('path' => $schedule_target->internal_url('schedule-inbox')));
+          if ( ! $attendee_inbox->HavePrivilegeTo('schedule-deliver-invite') ) {
+            $response = '3.8';  // No authority to deliver invitations to user.
+          }
+          else if ( $attendee_inbox->WriteCalendarMember($this_schedule_request, false) !== false ) {
+            $response = '1.2';  // Scheduling invitation delivered successfully
+            if ( $attendee_calendar->WriteCalendarMember($this_resource, false) === false ) {
+              dbg_error_log('ERROR','Could not write updated calendar member');
+              trace_bug('Failed to write scheduling resource.');
+            }
+          }
+        }
       }
     }
   }
@@ -1181,20 +1252,20 @@ EOSQL;
 
 /**
 * Given a dav_id and an original vCalendar, pull out each of the VALARMs
-* and write the values into the calendar_alarm table.
+* and write the values into the calendar_alarm_dav table.
 *
 * @param int $dav_id The dav_id of the caldav_data we're processing
 * @param vComponent The VEVENT or VTODO containing the VALARM
 * @return null
 */
 function write_alarms( $dav_id, vComponent $ical ) {
-  $qry = new AwlQuery('DELETE FROM calendar_alarm WHERE dav_id = '.$dav_id );
+  $qry = new AwlQuery('DELETE FROM calendar_alarm_dav WHERE dav_id = '.$dav_id );
   $qry->Exec('PUT',__LINE__,__FILE__);
 
   $alarms = $ical->GetComponents('VALARM');
   if ( count($alarms) < 1 ) return;
 
-  $qry->SetSql('INSERT INTO calendar_alarm ( dav_id, action, trigger, summary, description, component, next_trigger )
+  $qry->SetSql('INSERT INTO calendar_alarm_dav ( dav_id, action, trigger, summary, description, component, next_trigger )
           VALUES( '.$dav_id.', :action, :trigger, :summary, :description, :component,
                                       :related::timestamp with time zone + :related_trigger::interval )' );
   $qry->Prepare();
@@ -1215,6 +1286,7 @@ function write_alarms( $dav_id, vComponent $ical ) {
       if ( !preg_match('{^-?P(:?\d+W)?(:?\d+D)?(:?T(:?\d+H)?(:?\d+M)?(:?\d+S)?)?$}', $duration ) ) continue;
       $minus = (substr($duration,0,1) == '-');
       $related_trigger = trim(preg_replace( '#[PT-]#', ' ', $duration ));
+      if ($related_trigger == '') $related_trigger = '0 seconds';
       if ( $minus ) {
         $related_trigger = preg_replace( '{(\d+[WDHMS])}', '-$1 ', $related_trigger );
       }
@@ -1244,19 +1316,19 @@ function write_alarms( $dav_id, vComponent $ical ) {
 
 /**
 * Parse out the attendee property and write a row to the
-* calendar_attendee table for each one.
+* calendar_attendee_dav table for each one.
 * @param int $dav_id The dav_id of the caldav_data we're processing
 * @param vComponent The VEVENT or VTODO containing the ATTENDEEs
 * @return null
 */
 function write_attendees( $dav_id, vCalendar $ical ) {
-  $qry = new AwlQuery('DELETE FROM calendar_attendee WHERE dav_id = '.$dav_id );
+  $qry = new AwlQuery('DELETE FROM calendar_attendee_dav WHERE dav_id = '.$dav_id );
   $qry->Exec('PUT',__LINE__,__FILE__);
 
   $attendees = $ical->GetAttendees();
   if ( count($attendees) < 1 ) return;
 
-  $qry->SetSql('INSERT INTO calendar_attendee ( dav_id, status, partstat, cn, attendee, role, rsvp, property )
+  $qry->SetSql('INSERT INTO calendar_attendee_dav ( dav_id, status, partstat, cn, attendee, role, rsvp, property )
           VALUES( '.$dav_id.', :status, :partstat, :cn, :attendee, :role, :rsvp, :property )' );
   $qry->Prepare();
   $processed = array();
@@ -1324,14 +1396,6 @@ function write_resource( DAVResource $resource, $caldav_data, DAVResource $colle
   $qry = new AwlQuery();
   $qry->Begin();
 
-  $dav_params = array(
-      ':etag' => $etag,
-      ':dav_data' => $caldav_data,
-      ':caldav_type' => $resource_type,
-      ':session_user' => $author,
-      ':weak_etag' => $weak_etag
-  );
-
   $calitem_params = array(
       ':etag' => $etag
   );
@@ -1350,6 +1414,48 @@ function write_resource( DAVResource $resource, $caldav_data, DAVResource $colle
   }
   $dav_id = $row->dav_id;
   $old_dav_data = $row->caldav_data;
+
+  // reset all attendees' partstat to needs-action in vcal and caldav_date here, if time of event has been modified.
+  if ($old_dav_data) {
+    $modified = false;
+    $oldvcal = new vCalendar( $old_dav_data );
+    $oldr = $oldvcal->GetComponents('VTIMEZONE',false);
+    $oldfirst = $oldr[0];
+    $dtstart = $first->GetPValue('DTSTART');
+    $olddtstart = $oldfirst->GetPValue('DTSTART');
+    if (strcmp($dtstart, $olddtstart)) $modified = true;
+    $dtend = $first->GetPValue('DTEND');
+    $olddtend = $oldfirst->GetPValue('DTEND');
+    if (strcmp($dtend, $olddtend)) $modified = true;
+    $duration = $first->GetPValue('DURATION');
+    $oldduration = $oldfirst->GetPValue('DURATION');
+    $organizer = $vcal->GetOrganizer();
+    if (strcmp($duration, $oldduration)) $modified = true;
+    if (($modified == true) && !($organizer === false || empty($organizer))) {
+      dbg_error_log( 'PUT', "event time attributes have been modified, reset all attendees' PARTSTAT to NEEDS-ACTION.");
+      $organizer_email = preg_replace( '/^mailto:/i', '', $organizer->Value() );
+      $attendees = $first->GetProperties('ATTENDEE');
+      foreach( $attendees AS $attendee ) {
+        $attendee_email = preg_replace( '/^mailto:/', '', $attendee->Value() );
+        if ( $attendee_email != $organizer_email ) {
+         $attendee->SetParameterValue("PARTSTAT", "NEEDS-ACTION");
+         $attendee->SetParameterValue("SCHEDULE-STATUS", "1.0");
+        }
+      }
+      $first->SetProperties($attendees,'ATTENDEE');
+      $caldav_data = $vcal->Render(null, true);
+      dbg_error_log( 'PUT', "event time attributes have been modified, reset all attendees' PARTSTAT completed.");
+    }
+  }
+
+  $dav_params = array(
+      ':etag' => $etag,
+      ':dav_data' => $caldav_data,
+      ':caldav_type' => $resource_type,
+      ':session_user' => $author,
+      ':weak_etag' => $weak_etag
+  );
+
   $dav_params[':dav_id'] = $dav_id;
   $calitem_params[':dav_id'] = $dav_id;
 

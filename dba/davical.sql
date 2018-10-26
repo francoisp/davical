@@ -1,5 +1,5 @@
 -- DAViCal CalDAV Server - Database Schema
---
+-- This has a modfication from the plain vanilla schema and needs the php code that has also been modified; calendar_alarm and calendar_attendee have been renamed to calendar_alarm_dav calendar_attendee_dav because of a name clash
 
 
 -- Given a verbose DAV: or CalDAV: privilege name return the bitmask
@@ -169,7 +169,7 @@ CREATE TABLE calendar_item (
   collection_id INT8 REFERENCES collection(collection_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE,
   first_instance_start TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
   last_instance_end    TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL,
-  
+
   -- Cascade updates / deletes from the caldav_data table
   CONSTRAINT caldav_exists FOREIGN KEY ( user_no, dav_name )
                 REFERENCES caldav_data ( user_no, dav_name )
@@ -395,7 +395,7 @@ CREATE TABLE addressbook_address_email (
 );
 
 
-CREATE TABLE calendar_alarm (
+CREATE TABLE calendar_alarm_dav (
   dav_id INT8 NOT NULL REFERENCES caldav_data(dav_id) ON UPDATE CASCADE ON DELETE CASCADE,
   action TEXT,
   trigger TEXT,
@@ -423,7 +423,7 @@ INSERT INTO calendar_attendee_email_status (email_status_id, description)
   (13, 'attendee has refused')
 ;
 
-CREATE TABLE calendar_attendee (
+CREATE TABLE calendar_attendee_dav (
   dav_id INT8 NOT NULL REFERENCES caldav_data(dav_id) ON UPDATE CASCADE ON DELETE CASCADE,
   status TEXT,
   partstat TEXT,

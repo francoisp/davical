@@ -430,9 +430,7 @@ function LDAP_check($username, $password ){
 function fix_unique_member($list) {
   $fixed_list = array();
   foreach ( $list as $member ){
-    list( $mem, $rest ) = explode(",", $member );
-    $member = str_replace( 'uid=', '', $mem );
-    array_unshift( $fixed_list, $member );
+    array_unshift( $fixed_list, ldap_explode_dn($member,1)[0]);
   }
   return $fixed_list;
 }
@@ -529,8 +527,7 @@ function sync_LDAP_groups(){
       $c->messages[] = sprintf(i18n('- adding users %s to group : %s'),join(',',$ldap_groups_info[$group][$mapping['members']]),$group);
       foreach ( $ldap_groups_info[$group][$mapping['members']] as $member ){
         if ( $member_field == 'uniqueMember' || $dnfix ) {
-          list( $mem, $rest ) = explode(",", $member );
-          $member = str_replace( 'uid=', '', $mem );
+          $member = ldap_explode_dn($member,1)[0];
         }
         $qry = new AwlQuery( "INSERT INTO group_member SELECT g.principal_id AS group_id,u.principal_id AS member_id FROM dav_principal g, dav_principal u WHERE g.username=:group AND u.username=:member;",array (':group'=>$group,':member'=>$member) );
         $qry->Exec('sync_LDAP_groups',__LINE__,__FILE__);
@@ -598,11 +595,11 @@ function sync_LDAP(){
     $ldap_users_info[$ldap_user[$mapping['username']]] = $ldap_user;
     unset($ldap_users_tmp[$key]);
   }
-  $qry = new AwlQuery( "SELECT username, user_no, modified as updated FROM dav_principal where type_id=1");
+  $qry = new AwlQuery( "SELECT username, user_no, modified as updated , user_active FROM dav_principal where type_id=1");
   $qry->Exec('sync_LDAP',__LINE__,__FILE__);
   while($db_user = $qry->Fetch()) {
     $db_users[] = $db_user->username;
-    $db_users_info[$db_user->username] = array('user_no' => $db_user->user_no, 'updated' => $db_user->updated);
+    $db_users_info[$db_user->username] = array('user_no' => $db_user->user_no, 'updated' => $db_user->updated, 'user_active' => $db_user->user_active);
   }
 
   // all users from ldap
@@ -695,8 +692,9 @@ function sync_LDAP(){
       $valid[$mapping['modified']] = "$Y-$m-$d $H:$M:$S";
 
       $db_timestamp = substr(strtr($db_users_info[$username]['updated'], array(':' => '',' '=>'','-'=>'')),0,14);
-      if ( $ldap_timestamp > $db_timestamp ) {
-        sync_user_from_LDAP($principal, $mapping, $valid );
+      if ( $ldap_timestamp > $db_timestamp || !$db_users_info[$username]['user_active']) {
+        $principal->user_active = true;
+        sync_user_from_LDAP($principal, $mapping, $valid);
       }
       else {
         unset($users_to_update[$key]);

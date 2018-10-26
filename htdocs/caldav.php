@@ -89,15 +89,12 @@ register_shutdown_function('late_catch_fatal_error');
 //if ( $request->method == 'OPTIONS' || $c->always_send_dav_header )
     send_dav_header();  // Avoid polluting global namespace
 
-$allowed = implode( ', ', array_keys($request->supported_methods) );
-// header( 'Allow: '.$allowed);
-
 if ( ! ($request->IsPrincipal() || isset($request->collection) || $request->method == 'PUT' || $request->method == 'MKCALENDAR' || $request->method == 'MKCOL' ) ) {
   if ( preg_match( '#^/principals/users(/.*/)$#', $request->path, $matches ) ) {
     // Although this doesn't work with the iPhone, perhaps it will with iCal...
-    /** @todo integrate handling this URL into CalDAVRequest.php */
+    // This is better handled by a RewriteRule, see config/apache-davical.conf
     $redirect_url = ConstructURL('/caldav.php'.$matches[1]);
-    dbg_error_log( 'LOG WARNING', 'Redirecting %s for "%s" to "%s"', $request->method, $request->path, $redirect_url );
+    dbg_error_log( 'LOG WARNING', 'Redirecting %s for "%s" to "%s", consider using rewrites in the webserver instead!', $request->method, $request->path, $redirect_url );
     header('Location: '.$redirect_url );
     @ob_flush(); exit(0);
   }

@@ -24,117 +24,122 @@ require_once('iCalendar.php');
 class DAVResource
 {
   /**
-  * @var The partial URL of the resource within our namespace, which this resource is being retrieved as
+  * @var string The partial URL of the resource within our namespace, which this resource is being retrieved as
   */
   protected $dav_name;
 
   /**
-  * @var Boolean: does the resource actually exist yet?
+  * @var bool Does the resource actually exist yet?
   */
   protected $exists;
 
   /**
-  * @var The unique etag associated with the current version of the resource
+  * @var string The unique etag associated with the current version of the resource
   */
   protected $unique_tag;
 
   /**
-  * @var The actual resource content, if it exists and is not a collection
+  * @var string The actual resource content, if it exists and is not a collection
   */
   protected $resource;
 
   /**
-  * @var The parent of the resource, which will always be a collection
+  * @var DAVResource The parent of the resource, which will always be a collection
   */
   protected $parent;
 
   /**
-  * @var The types of the resource, possibly multiple
+  * @var array The types of the resource, possibly multiple
   */
   protected $resourcetypes;
 
   /**
-  * @var The type of the content
+  * @var string The type of the content
   */
   protected $contenttype;
 
   /**
-  * @var The canonical name which this resource exists at
+  * @var string The canonical name which this resource exists at
   */
   protected $bound_from;
 
   /**
-  * @var An object which is the collection record for this resource, or for it's container
+  * @var DAVResource An object which is the collection record for this resource, or for it's container
   */
   private $collection;
 
   /**
-  * @var An object which is the principal for this resource, or would be if it existed.
+  * @var DAVPrincipal An object which is the principal for this resource, or would be if it existed.
   */
   private $principal;
 
   /**
-  * @var A bit mask representing the current user's privileges towards this DAVResource
+  * @var integer A bit mask representing the current user's privileges towards this DAVResource
   */
   private $privileges;
 
   /**
-  * @var True if this resource is a collection of any kind
+  * @var bool True if this resource is a collection of any kind
   */
   private $_is_collection;
 
   /**
-  * @var True if this resource is a principal-URL
+  * @var bool True if this resource is a principal-URL
   */
   private $_is_principal;
 
   /**
-  * @var True if this resource is a calendar collection
+  * @var bool True if this resource is a calendar collection
   */
   private $_is_calendar;
 
   /**
-  * @var True if this resource is a binding to another resource
+  * @var bool True if this resource is a binding to another resource
   */
   private $_is_binding;
 
   /**
-  * @var True if this resource is a binding to an external resource
+  * @var bool True if this resource is a binding to an external resource
   */
   private $_is_external;
 
   /**
-  * @var True if this resource is an addressbook collection
+  * @var bool True if this resource is an addressbook collection
   */
   private $_is_addressbook;
 
   /**
-  * @var True if this resource is, or is in, a proxy collection
+  * @var bool True if this resource is, or is in, a proxy collection
   */
-  private $_is_proxy_request;
+  private $_is_proxy_resource;
 
   /**
-  * @var An array of the methods we support on this resource.
+  * @var The type of proxy collection this resource is or is in: read or write
+  */
+  private $proxy_type;
+
+  /**
+  * @var array An array of the methods we support on this resource.
   */
   private $supported_methods;
 
   /**
-  * @var An array of the reports we support on this resource.
+  * @var array An array of the reports we support on this resource.
   */
   private $supported_reports;
 
   /**
-  * @var An array of the dead properties held for this resource
+  * @var array An array of the dead properties held for this resource
   */
   private $dead_properties;
 
   /**
-  * @var An array of the component types we support on this resource.
+  * @var array An array of the component types we support on this resource.
   */
   private $supported_components;
 
   /**
-  * @var An array of DAVTicket objects if any apply to this resource, such as via a bind.
+  * @var array An array of DAVTicket objects if any apply to this resource, such as via a bind.
   */
   private $tickets;
 
@@ -166,7 +171,7 @@ class DAVResource
     $this->_is_binding       = false;
     $this->_is_external      = false;
     $this->_is_addressbook   = false;
-    $this->_is_proxy_request = false;
+    $this->_is_proxy_resource = false;
     if ( isset($parameters) && is_object($parameters) ) {
       $this->FromRow($parameters);
     }
@@ -259,12 +264,14 @@ class DAVResource
 
       $this->_is_calendar      = ($this->collection->is_calendar == 't');
       $this->_is_addressbook   = ($this->collection->is_addressbook == 't');
-      $this->_is_proxy_request = ($this->collection->type == 'proxy');
+      $this->_is_proxy_resource = ($this->collection->type == 'proxy');
       if ( $this->_is_principal && !isset($this->resourcetypes) ) {
         $this->resourcetypes   = '<DAV::collection/><DAV::principal/>';
       }
-      else if ( $this->_is_proxy_request ) {
+      else if ( $this->_is_proxy_resource ) {
         $this->resourcetypes  = $this->collection->resourcetypes;
+        preg_match( '#^/[^/]+/calendar-proxy-(read|write)/?[^/]*$#', $this->dav_name, $matches );
+        $this->proxy_type = $matches[1];
       }
       if ( isset($this->collection->dav_displayname) ) $this->collection->displayname = $this->collection->dav_displayname;
     }
@@ -285,7 +292,7 @@ class DAVResource
             $this->resource->url = null;
           }
           else {
-            if ( strtoupper($this->resource->class)=='CONFIDENTIAL' && !$this->HavePrivilegeTo('all') && $session->user_no != $this->resource->user_no ) {
+            if ( isset($this->resource->class) && strtoupper($this->resource->class)=='CONFIDENTIAL' && !$this->HavePrivilegeTo('all') && $session->user_no != $this->resource->user_no ) {
               $vcal = new iCalComponent($this->resource->caldav_data);
               $confidential = $vcal->CloneConfidential();
               $this->resource->caldav_data = $confidential->Render();
@@ -400,7 +407,7 @@ EOSQL;
     }
     else if ( preg_match( '#^(/([^/]+)/calendar-proxy-(read|write))/?[^/]*$#', $this->dav_name, $matches ) ) {
       $this->collection->type = 'proxy';
-      $this->_is_proxy_request = true;
+      $this->_is_proxy_resource = true;
       $this->proxy_type = $matches[3];
       $this->collection->dav_name = $this->dav_name;
       $this->collection->dav_displayname = sprintf( '%s proxy %s', $matches[2], $matches[3] );
@@ -925,6 +932,7 @@ EOQRY;
       'DAV::principal-property-search' => '',
       'DAV::principal-search-property-set' => '',
       'DAV::expand-property' => '',
+      'DAV::principal-match' => '',
       'DAV::sync-collection' => ''
     );
 
@@ -1103,6 +1111,18 @@ EOQRY;
 
 
   /**
+  * Checks whether this resource is a proxy collection
+  * @param string $type The type of proxy collection, 'read', 'write' or 'any'
+  */
+  function IsProxyCollection( $type = 'any' ) {
+    if ( $this->_is_proxy_resource ) {
+      return ($type == 'any' || $type == $this->proxy_type);
+    }
+    return false;
+  }
+
+
+  /**
   * Checks whether this resource is a scheduling inbox/outbox collection
   * @param string $type The type of scheduling collection, 'inbox', 'outbox' or 'any'
   */
@@ -1181,8 +1201,9 @@ EOQRY;
 
 
   /**
-  * Returns the URL of our resource
-  */
+   * Returns the URL of our resource
+   * @return string
+   */
   function url() {
     if ( !isset($this->dav_name) ) {
       throw Exception("What! How can dav_name not be set?");
@@ -1192,8 +1213,9 @@ EOQRY;
 
 
   /**
-  * Returns the dav_name of the resource in our internal namespace
-  */
+   * Returns the dav_name of the resource in our internal namespace
+   * @return string
+   */
   function dav_name() {
     if ( isset($this->dav_name) ) return $this->dav_name;
     return null;
@@ -1202,7 +1224,8 @@ EOQRY;
 
   /**
   * Returns the dav_name of the resource we are bound to, within our internal namespace
-  */
+   * @return string
+   */
   function bound_from() {
     if ( isset($this->bound_from) ) return $this->bound_from;
     return $this->dav_name();
@@ -1510,7 +1533,7 @@ EOQRY;
   * Return an array which is an expansion of the DAV::allprop
   */
   function DAV_AllProperties() {
-    if ( isset($this->dead_properties) ) $this->FetchDeadProperties();
+    if ( !isset($this->dead_properties) ) $this->FetchDeadProperties();
     $allprop = array_merge( (isset($this->dead_properties)?$this->dead_properties:array()),
       (isset($include_properties)?$include_properties:array()),
       array(
@@ -1694,6 +1717,30 @@ EOQRY;
         $reply->CalendarserverElement($prop, 'calendar-proxy-'.$proxy_type.'-for', $reply->href( $this->principal->ProxyFor($proxy_type) ) );
         break;
 
+      case 'http://calendarserver.org/ns/:group-member-set':
+      case 'DAV::group-member-set':
+        if ( $this->_is_proxy_resource ) {
+          $this->FetchPrincipal();
+          if ( $this->proxy_type == 'read' ) {
+            $reply->DAVElement( $prop, 'group-member-set', $reply->href( $this->principal->ReadProxyGroup() ) );
+          } else {
+            $reply->DAVElement( $prop, 'group-member-set', $reply->href( $this->principal->WriteProxyGroup() ) );
+          }
+        } else {
+          return false; // leave this to DAVPrincipal
+        }
+        break;
+
+      case 'http://calendarserver.org/ns/:group-membership':
+      case 'DAV::group-membership':
+        if ( $this->_is_proxy_resource ) {
+          /* the calendar-proxy-{read,write} pseudo-principal should not be a member of any group */
+          $reply->NSElement($prop, $tag );
+        } else {
+          return false; // leave this to DAVPrincipal
+        }
+        break;
+
       case 'DAV::current-user-privilege-set':
         if ( $this->HavePrivilegeTo('DAV::read-current-user-privilege-set') ) {
           $reply->NSElement($prop, $tag, $this->BuildPrivileges() );
@@ -1795,7 +1842,7 @@ EOQRY;
 
       case 'urn:ietf:params:xml:ns:carddav:max-resource-size':
         if ( ! $this->_is_collection || !$this->_is_addressbook ) return false;
-        $reply->NSElement($prop, $tag, 65500 );
+        $reply->NSElement($prop, $tag, '' );
         break;
 
       case 'urn:ietf:params:xml:ns:carddav:supported-address-data':

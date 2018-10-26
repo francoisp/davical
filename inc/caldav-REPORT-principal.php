@@ -1,7 +1,8 @@
 <?php
 
-$responses = array();
-
+if ( $request->depth > 0 ) {
+  $request->DoResponse( 400, 'The principal-property-search REPORT is only defined for Depth "0".' );
+}
 
 /**
  * Build the array of properties to include in the report output
@@ -71,6 +72,7 @@ foreach( $get_props AS $k1 => $v1 ) {
   $properties[] = $v1->GetNSTag();
 }
 
+$responses = array();
 if ( $qry->Exec("REPORT",__LINE__,__FILE__) && $qry->rows() > 0 ) {
   while( $row = $qry->Fetch() ) {
     $principal = new DAVResource($row);

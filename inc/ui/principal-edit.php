@@ -976,7 +976,7 @@ function binding_row_editor() {
 
       $_POST['bound_source_id'] = $dav_id;
       $_POST['external_url'] = $href;
-      $_POST['external_type'] = 'calendar';
+      $_POST['type'] = 'calendar';
     }
     else {
       // internal bind

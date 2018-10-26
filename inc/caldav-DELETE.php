@@ -79,9 +79,7 @@ if ( $dav_resource->IsCollection() ) {
   $cache->releaseLock($myLock);
 }
 else {
-  if ( isset($request->etag_if_match) && $request->etag_if_match != $dav_resource->unique_tag() && $request->etag_if_match != "*"  ) {
-    $request->DoResponse( 412, translate("Resource has changed on server - not deleted") );
-  }
+  $request->CheckEtagMatch( $dav_resource->Exists(), $dav_resource->unique_tag() );
 
   // Check to see if we need to do any scheduling transactions for this one.
   do_scheduling_for_delete($dav_resource);

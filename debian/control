@@ -4,13 +4,13 @@ Priority: optional
 Maintainer: Davical Development Team <davical-devel@lists.sourceforge.net>
 Uploaders: Andrew McMillan <awm@debian.org>,
  Florian Schlichting <fsfs@debian.org>
-Standards-Version: 4.1.1
+Standards-Version: 4.1.3
 Build-Depends: debhelper (>= 9),
  dh-exec,
  jdupes,
- libawl-php (>= 0.58-1~), libawl-php (<< 0.59),
+ libawl-php (>= 0.59-1~), libawl-php (<< 0.60),
  gettext,
- php-apigen,
+ doxygen,
  php-cli | php5-cli,
  rst2pdf
 Vcs-git: https://gitlab.com/davical-project/davical.git
@@ -20,7 +20,7 @@ Homepage: https://www.davical.org/
 Package: davical
 Architecture: all
 Depends: ${misc:Depends}, ${perl:Depends},
- libawl-php (>= 0.58-1~), libawl-php (<< 0.59),
+ libawl-php (>= 0.59-1~), libawl-php (<< 0.60),
  libdbd-pg-perl,
  libyaml-perl,
  php | php5,

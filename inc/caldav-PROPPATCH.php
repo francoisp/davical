@@ -152,6 +152,91 @@ foreach( $setprops AS $k => $setting ) {
       }
       break;
 
+    case 'DAV::group-member-set':
+      if ( $dav_resource->IsProxyCollection() ) {
+        $privileges_read = privilege_to_bits( array('read', 'read-free-busy', 'schedule-deliver') );
+        $privileges_write = privilege_to_bits( array('write', 'schedule-send') );
+        $type = 'read';
+        if ( $dav_resource->IsProxyCollection('write') ) {
+          $type = 'write';
+        }
+
+        $by_principal = $dav_resource->getProperty('principal_id');
+        $sqlparams = array( ':by_principal' => $by_principal );
+
+        $existing_grants = array();
+        $qry->QDo('SELECT to_principal, privileges FROM grants WHERE by_principal = :by_principal', $sqlparams);
+        while ( $row = $qry->Fetch() ) {
+          $existing_grants[$row->to_principal] = bindec($row->privileges);
+        }
+
+        $group_members = $setting->GetElements('DAV::href');
+        foreach( $group_members AS $member ) {
+          $to_principal = new Principal('path', DeconstructURL( $member->GetContent() ));
+          if ( !$to_principal->Exists() ) {
+            add_failure('set', $tag, 'HTTP/1.1 403 Forbidden',
+              translate('Principal not found') . ': ' . $member->GetContent(), 'recognized-principal');
+            break;
+          }
+          $sqlparams[':to_principal'] = $to_principal->principal_id();
+
+          if ( array_key_exists($to_principal->principal_id(), $existing_grants) ) {
+            $sql = 'UPDATE grants SET privileges=:privileges::INT::BIT(24) WHERE to_principal=:to_principal AND by_principal=:by_principal';
+            $existing_privileges = $existing_grants[$to_principal->principal_id()];
+            unset( $existing_grants[$to_principal->principal_id()] );
+          } else {
+            $sql = 'INSERT INTO grants (by_principal, to_principal, privileges) VALUES(:by_principal, :to_principal, :privileges::INT::BIT(24))';
+            $existing_privileges = 0;
+          }
+
+          $privileges = $existing_privileges | $privileges_read; // always add read privileges here
+          if ( $type == 'write' ) {
+            $privileges |= $privileges_write; // add write privileges as well
+          } else {
+            $privileges &= $privileges_write ^ DAVICAL_MAXPRIV; // substract write privileges
+          }
+          if ( $privileges == $existing_privileges ) continue; // unchanged
+          $sqlparams[':privileges'] = $privileges;
+
+          $qry->QDo($sql, $sqlparams);
+          dbg_error_log("PROPPATCH", "group-member-set: %s (%s) is granted %s access to %s", $to_principal->username(), $to_principal->principal_id(), $type, $dav_resource->getProperty('username'));
+
+          Principal::cacheDelete('dav_name',$to_principal->dav_name());
+          Principal::cacheFlush('principal_id IN (SELECT member_id FROM group_member WHERE group_id = ?)', array($to_principal->principal_id()));
+        }
+
+        // if there are any remaining grants of our $type, we need to delete them
+        // ("set" means "replace any existing property", WEBDAV RFC2518 12.13.2)
+        foreach ( $existing_grants AS $id => $existing_privs ) {
+          $have_write = $existing_privs & $privileges_write;
+          if ( $type == 'read' && $have_write ) continue;
+          if ( $type == 'write' && ! $have_write ) continue;
+
+          $negative_readwrite = ( $privileges_read | $privileges_write ) ^ DAVICAL_MAXPRIV;
+          $remaining_privs = $existing_privs & $negative_readwrite;
+
+          if ( $remaining_privs > 0 ) {
+            $sql = 'UPDATE grants SET privileges=:privileges::INT::BIT(24)';
+            $sqlparams[':privileges'] = $remaining_privs;
+          } else {
+            $sql = 'DELETE FROM grants';
+          }
+          $sqlparams[':to_principal'] = $id;
+          $qry->QDo($sql.' WHERE to_principal=:to_principal AND by_principal=:by_principal', $sqlparams);
+          dbg_error_log("PROPPATCH", "group-member-set: %s is no longer granted %s access to %s", $id, $type, $dav_resource->getProperty('username'));
+          Principal::cacheFlush('principal_id = :to_principal', $sqlparams);
+        }
+      }
+      else {
+          /* @todo PROPPATCH set group-member-set for regular group principal */
+          dbg_error_log("ERROR", "PROPPATCH: set group-member-set for non-proxy collection: don't know what to do!");
+          add_failure('set', $tag, 'HTTP/1.1 403 Forbidden',
+            'group-member-set ' . translate('unimplemented'), 'cannot-modify-protected-property');
+          break;
+      }
+      $success[$tag] = 1;
+      break;
+
     case 'urn:ietf:params:xml:ns:caldav:schedule-calendar-transp':
       if ( $dav_resource->IsCollection() && ( $dav_resource->IsCalendar() || $setcalendar ) && !$dav_resource->IsBinding() ) {
         $transparency = $setting->GetPath('urn:ietf:params:xml:ns:caldav:schedule-calendar-transp/*');
@@ -244,6 +329,61 @@ foreach( $rmprops AS $k => $setting ) {
     case 'DAV::resourcetype':
       add_failure('rm', $tag, 'HTTP/1.1 403 Forbidden',
             translate("DAV::resourcetype may only be set to a new value, it may not be removed."), 'cannot-modify-protected-property');
+      break;
+
+    case 'DAV::group-member-set':
+      if ( $dav_resource->IsProxyCollection() ) {
+        $type = 'read';
+        $privileges = privilege_to_bits( array('read', 'read-free-busy', 'schedule-deliver') );
+        if ( $dav_resource->IsProxyCollection('write') ) {
+          $type = 'write';
+          $privileges |= privilege_to_bits( array('write', 'schedule-send') );
+        }
+
+        $by_principal = $dav_resource->getProperty('principal_id');
+        $sqlparams = array( ':by_principal' => $by_principal );
+
+        // look up existing grants of our type
+        $existing_grants = array();
+        $qry->QDo('SELECT privileges, to_principal FROM grants WHERE by_principal = :by_principal', $sqlparams);
+        while( $row = $qry->Fetch() ) {
+          $existing_privileges = bindec($row->privileges);
+          if ( ($existing_privileges & $privileges) == $privileges ) {
+            $existing_grants[$row->to_principal] = $existing_privileges;
+          }
+        }
+
+        // examine the members to be removed
+        $group_members = $setting->GetElements('DAV::href');
+        foreach( $group_members AS $member ) {
+          $to_principal = new Principal('path', DeconstructURL( $member->GetContent() ));
+          // "Specifying the removal of a property that does not exist is not an error."
+          if ( !$to_principal->Exists() ) continue;
+          if ( !array_key_exists($to_principal->principal_id(), $existing_grants) ) continue;
+
+          $remaining_privileges = $existing_grants[$to_principal->principal_id()] & ($privileges ^ DAVICAL_MAXPRIV);
+          if ($remaining_privileges > 0) {
+            $sql = 'UPDATE grants SET privileges=:privileges::INT::BIT(24) ';
+            $sqlparams[':privileges'] = $remaining_privileges;
+          } else {
+            $sql = 'DELETE FROM grants ';
+          }
+
+          $sqlparams[':to_principal'] = $to_principal->principal_id();
+          $qry->QDo($sql.'WHERE by_principal = :by_principal AND to_principal = :to_principal', $sqlparams);
+
+          dbg_error_log("PROPPATCH", "group-member-set: %s is no longer granted %s access to %s", $to_principal->username(), $type, $by_principal);
+          Principal::cacheFlush('principal_id = :to_principal', $sqlparams);
+        }
+      }
+      else {
+          /* @todo PROPPATCH remove group-member-set for regular group principal */
+          dbg_error_log("ERROR", "PROPPATCH: remove group-member-set for non-proxy collection: don't know what to do!");
+          add_failure('rm', $tag, 'HTTP/1.1 403 Forbidden',
+            'group-member-set ' . translate('unimplemented'), 'cannot-modify-protected-property');
+          break;
+      }
+      $success[$tag] = 1;
       break;
 
     case 'urn:ietf:params:xml:ns:caldav:calendar-timezone':

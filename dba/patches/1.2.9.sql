@@ -25,11 +25,11 @@ CREATE TABLE addressbook_address_adr (
 );
 
 -- 'N' => 'New/Needs setting', 'A' = 'Active', 'O' = 'Old'
-ALTER TABLE calendar_alarm ADD COLUMN trigger_state CHAR DEFAULT 'N';
+ALTER TABLE calendar_alarm_dav ADD COLUMN trigger_state CHAR DEFAULT 'N';
 
 -- Internal DAViCal calendar state
-ALTER TABLE calendar_attendee ADD COLUMN attendee_state TEXT;
-ALTER TABLE calendar_attendee ADD COLUMN weak_etag TEXT;
+ALTER TABLE calendar_attendee_dav ADD COLUMN attendee_state TEXT;
+ALTER TABLE calendar_attendee_dav ADD COLUMN weak_etag TEXT;
 
 SELECT new_db_revision(1,2,9, 'Septembre' );
 

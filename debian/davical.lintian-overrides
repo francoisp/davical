@@ -1,8 +1,8 @@
 # this is lintian being stupid and failing to detect our alternative php-cli dependency - remove when dropping php5
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/archive-old-events.php
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/cron-sync-ldap.php
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/export_calendar.php
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/load_calendar.php
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/refresh-alarms.php
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/sync-remote-caldav.php
-davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/tz-update.php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/archive-old-events.php #!php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/cron-sync-ldap.php #!php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/export_calendar.php #!php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/load_calendar.php #!php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/refresh-alarms.php #!php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/sync-remote-caldav.php #!/usr/bin/php
+davical: php-script-but-no-php-cli-dep usr/share/davical/scripts/tz-update.php #!php

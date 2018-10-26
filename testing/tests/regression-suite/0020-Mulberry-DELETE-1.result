@@ -2,10 +2,13 @@ HTTP/1.1 412 Precondition Failed
 Date: Dow, 01 Jan 2000 00:00:00 GMT
 DAV: 1, 2, 3, access-control, calendar-access, calendar-schedule
 DAV: extended-mkcol, bind, addressbook, calendar-auto-schedule, calendar-proxy
-Content-Length: 44
-Content-Type: text/plain; charset="utf-8"
+Content-Length: 204
+Content-Type: text/xml; charset="utf-8"
 
-Resource has changed on server - not deleted
+<?xml version="1.0" encoding="utf-8" ?>
+<error xmlns="DAV:">
+  <if-match/>Existing resource ETag of "6cff373f55c3e8318ad1c0db93205d08" does not match "bogus-etag-b000d7defa19ccb7cd21e546b54155ee"
+</error>
          dav_etag: >6cff373f55c3e8318ad1c0db93205d08<
          dav_name: >/user1/home/F56B49B10FC923D20FE2DC92D6580340-0.ics<
 
